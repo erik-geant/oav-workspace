@@ -1,0 +1,7 @@
+POSTGRES_USER=root
+POSTGRES_PASSWORD=super-secret
+APP_DB_USER=user1
+APP_DB_PASS=pass1
+APP_DB_NAME=orchestrator-core
+
+REDIS_PASSWORD=hackme

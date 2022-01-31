@@ -1,18 +1,32 @@
 services:
     postgres:
-        image: postgres:10.5
-        # could randomize this, but no need except for crashes
-        container_name: postgres
-        volumes:
-          - './pg_init:/docker-entrypoint-initdb.d/'
-        environment:
-          - POSTGRES_USER=${POSTGRES_USER}
-          - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-          - APP_DB_USER=${APP_DB_USER}
-          - APP_DB_PASS=${APP_DB_PASS}
-          - APP_DB_NAME=${APP_DB_NAME}
-        networks:
-          - backend
+      image: postgres:10.5
+      container_name: postgres
+      volumes:
+        - ./pg_init:/docker-entrypoint-initdb.d/
+      environment:
+        - POSTGRES_USER=${POSTGRES_USER}
+        - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+        - APP_DB_USER=${APP_DB_USER}
+        - APP_DB_PASS=${APP_DB_PASS}
+        - APP_DB_NAME=${APP_DB_NAME}
+      networks:
+        - backend
+
+    redis:
+      image: "redis:alpine"
+      container_name: redis
+      command: redis-server --requirepass ${REDIS_PASSWORD}
+      ports:
+        - 6379:6379
+      volumes:
+        - ./redis/redis.conf:/usr/local/etc/redis/redis.conf
+        # - ./redis/data:/var/lib/redis
+      environment:
+        - REDIS_REPLICATION_MODE=master
+      networks:
+        backend:
 
 networks:
   backend:
+

@@ -1,43 +1,54 @@
 services:
 
-#    postgres:
-#      image: postgres:10.5
-#      container_name: postgres
-#      volumes:
-#        - ./pg_init:/docker-entrypoint-initdb.d/
-#      environment:
-#        - POSTGRES_USER=${POSTGRES_USER}
-#        - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-#        - APP_DB_USER=${APP_DB_USER}
-#        - APP_DB_PASS=${APP_DB_PASS}
-#        - APP_DB_NAME=${APP_DB_NAME}
-#      networks:
-#        - backend
-#
-#    redis:
-#      image: redis:alpine
-#      container_name: redis
-#      command: redis-server --requirepass ${REDIS_PASSWORD}
-#      ports:
-#        - 6379:6379
-#      volumes:
-#        - ./redis/redis.conf:/usr/local/etc/redis/redis.conf
-#        # - ./redis/data:/var/lib/redis
-#      environment:
-#        - REDIS_REPLICATION_MODE=master
-#      networks:
-#        backend:
+    postgres:
+      image: postgres:alpine
+      # image: postgres:10.5
+      container_name: postgres
+      ports:
+      - 55432:5432
+      volumes:
+        - ./pg_init:/docker-entrypoint-initdb.d/
+      environment:
+        - POSTGRES_USER=${POSTGRES_USER}
+        - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+        - APP_DB_USER=${APP_DB_USER}
+        - APP_DB_PASS=${APP_DB_PASS}
+        - APP_DB_NAME=${APP_DB_NAME}
+      networks:
+        - backend
+
+    redis:
+      image: redis:alpine
+      container_name: redis
+      command: redis-server --requirepass ${REDIS_PASSWORD}
+      ports:
+        - 6379:6379
+      volumes:
+        - ./redis/redis.conf:/usr/local/etc/redis/redis.conf
+        # - ./redis/data:/var/lib/redis
+      environment:
+        - REDIS_REPLICATION_MODE=master
+      networks:
+        backend:
 
     core:
 #      image: python:3-alpine
-      image: debian:latest
+      image: orchestrator_core_base
       container_name: core
       command: /entrypoint.sh
+      ports:
+        - 38080:${CORE_LOCAL_PORT}
       volumes:
         - ${HOST_PIP_CACHE}:/cache:rw,z
-        - ./core/entrypoint.sh:/entrypoint.sh
+        - ./core/entrypoint-core.sh:/entrypoint.sh
+        - ./core/core.py:/core.py
       environment:
         - XDG_CACHE_HOME=/cache
+        - APP_DB_USER=${APP_DB_USER}
+        - APP_DB_PASS=${APP_DB_PASS}
+        - APP_DB_NAME=${APP_DB_NAME}
+        - REDIS_PASSWORD=${REDIS_PASSWORD}
+        - CORE_LOCAL_PORT=${CORE_LOCAL_PORT}
       networks:
         backend:
 

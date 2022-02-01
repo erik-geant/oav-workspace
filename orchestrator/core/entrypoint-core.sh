@@ -1,12 +1,16 @@
 #!/bin/sh
-#apk update
-#apk add postgresql-dev gcc g++ python3 python3-dev musl-dev
-#pip install --upgrade pip
-#pip install orchestrator-core
 
-apt-get update -y
-apt-get install -y postgresql-server-dev-all gcc g++ python3 python3-dev python3-pip musl-dev
-pip3 install --upgrade pip
-pip3 install orchestrator-core
+# postgres container name: postgres
+# redis container name: redis
 
-tail -f /dev/null
+# orchestrator settings
+export DATABASE_URI=postgresql://$APP_DB_USER:$APP_DB_PASS@postgres/$APP_DB_NAME
+export CACHE_HOST=redis
+export WEBSOCKET_BROADCASTER_URL=redis://nobody:$REDIS_PASSWORD@redis:6379
+
+
+sleep 10
+python3 core.py db init
+python3 core.py db upgrade heads
+echo CORE_LOCAL_PORT: $CORE_LOCAL_PORT
+PYTHONPATH=/ uvicorn --reload --host 0.0.0.0 --port $CORE_LOCAL_PORT core:app

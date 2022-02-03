@@ -1,83 +1,105 @@
 services:
 
-    db:
-      image: postgres:alpine
-      # image: postgres:10.5
-      container_name: db
-      ports:
-      - 55432:5432
-      volumes:
-        - ./pg_init:/docker-entrypoint-initdb.d/
-      environment:
-        - POSTGRES_USER=${POSTGRES_USER}
-        - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-        - APP_DB_USER=${APP_DB_USER}
-        - APP_DB_PASS=${APP_DB_PASS}
-        - APP_DB_NAME=${APP_DB_NAME}
-      healthcheck:
-        timeout: 3s
-        retries: 2
-        test:
-          - CMD
-          - pg_isready
-          - -q
-          - -d
-          - postgres
-          - -U
-          - root
-      networks:
-        - backend
+  db:
+    image: postgres:alpine
+    # image: postgres:10.5
+    container_name: db
+#    ports:
+#    - 55432:5432
+    volumes:
+      - ./pg_init:/docker-entrypoint-initdb.d/
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - APP_DB_USER=${APP_DB_USER}
+      - APP_DB_PASS=${APP_DB_PASS}
+      - APP_DB_NAME=${APP_DB_NAME}
+    healthcheck:
+      timeout: 3s
+      retries: 2
+      test:
+        - CMD
+        - pg_isready
+        - -q
+        - -d
+        - postgres
+        - -U
+        - root
+    networks:
+      - backend
 
-    websocket-broadcaster:
-      image: redis:alpine
-      container_name: websocket-broadcaster
-      command: redis-server --requirepass ${REDIS_PASSWORD}
-      ports:
-        - 6379:6379
-      volumes:
-        - ./redis/redis.conf:/usr/local/etc/redis/redis.conf
-        # - ./redis/data:/var/lib/redis
-      environment:
-        - REDIS_REPLICATION_MODE=master
-      healthcheck:
-        timeout: 3s
-        retries: 2
-        test:
-          - CMD
-          - redis-cli
-          - ping
-      networks:
-        backend:
+  websocket-broadcaster:
+    image: redis:alpine
+    container_name: websocket-broadcaster
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+#    ports:
+#      - 6379:6379
+    volumes:
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf
+      # - ./redis/data:/var/lib/redis
+    environment:
+      - REDIS_REPLICATION_MODE=master
+    healthcheck:
+      timeout: 3s
+      retries: 2
+      test:
+        - CMD
+        - redis-cli
+        - ping
+    networks:
+      backend:
 
-    core:
-#      image: python:3-alpine
-      image: orchestrator_core_base
-      container_name: core
-      command: /entrypoint.sh
-      ports:
-        - 38080:${CORE_LOCAL_PORT}
-      volumes:
-        - ${HOST_PIP_CACHE}:/cache:rw,z
-        - ./core/entrypoint-core.sh:/entrypoint.sh
-        - ./core/core.py:/core.py
-      environment:
-        - XDG_CACHE_HOME=/cache
-        - APP_DB_USER=${APP_DB_USER}
-        - APP_DB_PASS=${APP_DB_PASS}
-        - APP_DB_NAME=${APP_DB_NAME}
-        # container name
-        - APP_DB_HOSTNAME=db
-        # container name
-        - REDIS_HOSTNAME=websocket-broadcaster
-        - REDIS_PASSWORD=${REDIS_PASSWORD}
-        - CORE_LOCAL_PORT=${CORE_LOCAL_PORT}
-      depends_on:
-        db:
-          condition: service_healthy
-        websocket-broadcaster:
-          condition: service_healthy
-      networks:
-        backend:
+  core:
+    # built from python:3-alpine
+    # cf. https://workfloworchestrator.org/orchestrator-core/getting-started/base/
+    image: orchestrator_core_base
+    container_name: core
+    command: /entrypoint.sh
+    ports:
+      - 38080:${CORE_LOCAL_PORT}
+    volumes:
+      - ${HOST_PIP_CACHE}:/cache:rw,z
+      - ./core/entrypoint-core.sh:/entrypoint.sh
+      - ./core/core.py:/core.py
+    environment:
+      - XDG_CACHE_HOME=/cache
+      - APP_DB_USER=${APP_DB_USER}
+      - APP_DB_PASS=${APP_DB_PASS}
+      - APP_DB_NAME=${APP_DB_NAME}
+      # container name
+      - APP_DB_HOSTNAME=db
+      # container name
+      - REDIS_HOSTNAME=websocket-broadcaster
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - CORE_LOCAL_PORT=${CORE_LOCAL_PORT}
+    depends_on:
+      db:
+        condition: service_healthy
+      websocket-broadcaster:
+        condition: service_healthy
+    networks:
+      backend:
+
+  gui:
+    # built from node:14.19-bullseye
+    # and https://workfloworchestrator.org/orchestrator-core/getting-started/workshop/step2/
+    image: orchestrator_gui_base
+    container_name: gui
+    command: /entrypoint.sh
+    volumes:
+      - ./gui/entrypoint.sh:/entrypoint.sh
+    ports:
+      - 3000:3000
+    environment:
+      # container name
+      - CORE_HOSTNAME=core
+      - CORE_PORT=${CORE_LOCAL_PORT}
+      - APP_PORT=3000
+    depends_on:
+      core:
+        condition: service_started
+    networks:
+      backend:
 
 networks:
   backend:
